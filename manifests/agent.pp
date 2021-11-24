@@ -134,6 +134,7 @@ define azure_pipelines::agent (
         { identity => $service_user, rights => ['full'], perm_type=> 'allow', child_types => 'all', affects => 'all' },
     ],
     Hash[String[1], String[1]] $env_vars = {},
+    Boolean $use_sensitive = true,
 ) {
     if $instance_url == undef {
         if $vsts {
@@ -343,8 +344,14 @@ define azure_pipelines::agent (
     }
 
     if $facts['kernel'] == 'windows' {
+        $config_base_command = "${install_path}/${config_script} --unattended --url ${_instance_url} --auth ${auth_type} ${opts}"
+        $config_command = $use_sensitive ? {
+          false   => $config_base_command,
+          default => Sensitive.new($config_base_command),
+        }
+      
         exec {"${install_path}/${config_script}":
-            command => Sensitive.new("${install_path}/${config_script} --unattended --url ${_instance_url} --auth ${auth_type} ${opts}"),
+            command => $config_command,
             creates => "${install_path}/.credentials",
             require => Archive["${install_path}/${archive_name}"],
         }
@@ -357,8 +364,14 @@ define azure_pipelines::agent (
         }
     }
     else {
+        $config_base_command = "${install_path}/${config_script} --unattended --url ${_instance_url} --auth ${auth_type} ${opts}"
+        $config_command = $use_sensitive ? {
+          false   => $config_base_command,
+          default => Sensitive.new($config_base_command),
+        }
+        
         exec {"${install_path}/${config_script}":
-            command => Sensitive.new("${install_path}/${config_script} --unattended --url ${_instance_url} --auth ${auth_type} ${opts}"),
+            command => $config_command,
             creates => "${install_path}/.credentials",
             user    => $service_user,
             require => Archive["${install_path}/${archive_name}"],
