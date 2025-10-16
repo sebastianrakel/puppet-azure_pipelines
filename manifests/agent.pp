@@ -133,6 +133,7 @@ define azure_pipelines::agent (
         { identity => 'Administrators', rights => ['full'], perm_type=> 'allow', child_types => 'all', affects => 'all' },
         { identity => $service_user, rights => ['full'], perm_type=> 'allow', child_types => 'all', affects => 'all' },
     ],
+    Hash[String[1], String[1]] $env_vars = {},
 ) {
     if $instance_url == undef {
         if $vsts {
@@ -332,6 +333,14 @@ define azure_pipelines::agent (
     }
 
     $opts = "${token_opts} ${username_opts} ${password_opts} ${pool_opts} ${replace_opts} ${agent_name_opts} ${work_opts} ${accept_tee_eula_opts} ${run_as_service_opts} ${run_as_auto_logon_opts} ${windows_logon_account_opts} ${windows_logon_password_opts} ${overwrite_auto_logon_opts} ${no_restart_opts} ${deployment_group_opts} ${project_name_opts} ${deployment_group_name_opts} ${deployment_group_tags_opts}"
+
+    $env_vars.each |String $key, String $value|{
+      shellvar { $key:
+        ensure => present,
+        target => "${install_path}/.env",
+        value  => $value,
+      }
+    }
 
     if $facts['kernel'] == 'windows' {
         exec {"${install_path}/${config_script}":
